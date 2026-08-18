@@ -14,10 +14,27 @@ class AuthController extends AsyncNotifier<UserSummary?> {
     return ref.watch(authRepositoryProvider).restoreSession();
   }
 
-  Future<void> login({required String publicId, required String pin}) async {
+  Future<void> register({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+  }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-      () => ref.read(authRepositoryProvider).login(publicId: publicId, pin: pin),
+      () => ref.read(authRepositoryProvider).register(
+            firstName: firstName,
+            lastName: lastName,
+            email: email,
+            password: password,
+          ),
+    );
+  }
+
+  Future<void> login({required String email, required String password}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => ref.read(authRepositoryProvider).login(email: email, password: password),
     );
   }
 

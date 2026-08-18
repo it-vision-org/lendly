@@ -28,12 +28,6 @@ backend/.gradle/
 # Logs
 *.log
 
-# Generated files
-mobile/lib/**/*.g.dart
-mobile/lib/**/*.freezed.dart
-
 # Other files
 
 project-idea.txt
-questions, rules and cards.txt
-questions-players-relation.txt

@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/active_game/presentation/pages/active_game_page.dart';
-import '../../features/active_game/presentation/pages/session_lobby_page.dart';
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
-import '../../features/home/presentation/pages/home_page.dart';
-import '../../features/my_cards/presentation/pages/my_cards_page.dart';
-import '../../features/rules/presentation/pages/rules_page.dart';
-import '../../features/session_history/presentation/pages/session_history_page.dart';
-import '../../features/session_results/presentation/pages/session_results_page.dart';
-import '../../features/session_setup/presentation/pages/join_session_page.dart';
-import '../../features/session_setup/presentation/pages/session_setup_page.dart';
-import '../../features/settings/presentation/pages/settings_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/contacts/data/models/contact.dart';
+import '../../features/contacts/presentation/pages/contact_detail_page.dart';
+import '../../features/contacts/presentation/pages/contact_form_page.dart';
+import '../../features/contacts/presentation/pages/contacts_page.dart';
+import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../features/profile/presentation/pages/profile_page.dart';
+import '../../features/splash/presentation/pages/splash_page.dart';
+import '../../features/transactions/data/models/transaction.dart';
+import '../../features/transactions/presentation/pages/transaction_detail_page.dart';
+import '../../features/transactions/presentation/pages/transaction_form_page.dart';
+import '../../features/transactions/presentation/pages/transactions_page.dart';
+import '../widgets/main_shell.dart';
 
 class _AuthRefreshNotifier extends ChangeNotifier {
   void notify() => notifyListeners();
@@ -28,86 +31,86 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refreshNotifier.dispose);
 
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/splash',
     refreshListenable: refreshNotifier,
     redirect: (context, state) {
       final authState = ref.read(authControllerProvider);
       final isInitializing = authState.isLoading && !authState.hasValue;
+      final location = state.matchedLocation;
+
       if (isInitializing) {
-        return null;
+        return location == '/splash' ? null : '/splash';
       }
 
       final isLoggedIn = authState.value != null;
-      final goingToLogin = state.matchedLocation == '/login';
+      final isAuthRoute = location == '/login' || location == '/register';
 
-      if (!isLoggedIn && !goingToLogin) {
+      if (!isLoggedIn && !isAuthRoute) {
         return '/login';
       }
-      if (isLoggedIn && goingToLogin) {
+      if (isLoggedIn && (isAuthRoute || location == '/splash')) {
         return '/home';
       }
       return null;
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        name: 'login',
-        builder: (context, state) => const LoginPage(),
+      GoRoute(path: '/splash', name: 'splash', builder: (context, state) => const SplashPage()),
+      GoRoute(path: '/login', name: 'login', builder: (context, state) => const LoginPage()),
+      GoRoute(path: '/register', name: 'register', builder: (context, state) => const RegisterPage()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/home', name: 'home', builder: (context, state) => const DashboardPage())],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/transactions',
+                name: 'transactions',
+                builder: (context, state) => const TransactionsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/contacts', name: 'contacts', builder: (context, state) => const ContactsPage())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/profile', name: 'profile', builder: (context, state) => const ProfilePage())],
+          ),
+        ],
       ),
       GoRoute(
-        path: '/home',
-        name: 'home',
-        builder: (context, state) => const HomePage(),
+        path: '/transactions/new',
+        name: 'transaction-new',
+        builder: (context, state) => const TransactionFormPage(),
       ),
       GoRoute(
-        path: '/session-setup',
-        name: 'session-setup',
+        path: '/transactions/:id/edit',
+        name: 'transaction-edit',
         builder: (context, state) =>
-            SessionSetupPage(groupId: state.extra! as String),
+            TransactionFormPage(transaction: state.extra as Transaction?),
       ),
       GoRoute(
-        path: '/join-session',
-        name: 'join-session',
-        builder: (context, state) => const JoinSessionPage(),
-      ),
-      GoRoute(
-        path: '/session/:sessionId/lobby',
-        name: 'session-lobby',
+        path: '/transactions/:id',
+        name: 'transaction-detail',
         builder: (context, state) =>
-            SessionLobbyPage(sessionId: state.pathParameters['sessionId']!),
+            TransactionDetailPage(transactionId: state.pathParameters['id']!),
       ),
       GoRoute(
-        path: '/session/:sessionId/play',
-        name: 'session-play',
-        builder: (context, state) =>
-            ActiveGamePage(sessionId: state.pathParameters['sessionId']!),
+        path: '/contacts/new',
+        name: 'contact-new',
+        builder: (context, state) => const ContactFormPage(),
       ),
       GoRoute(
-        path: '/session/:sessionId/results',
-        name: 'session-results',
-        builder: (context, state) =>
-            SessionResultsPage(sessionId: state.pathParameters['sessionId']!),
+        path: '/contacts/:id/edit',
+        name: 'contact-edit',
+        builder: (context, state) => ContactFormPage(contact: state.extra as Contact?),
       ),
       GoRoute(
-        path: '/history',
-        name: 'history',
-        builder: (context, state) =>
-            SessionHistoryPage(groupId: state.extra! as String),
-      ),
-      GoRoute(
-        path: '/settings',
-        name: 'settings',
-        builder: (context, state) => const SettingsPage(),
-      ),
-      GoRoute(
-        path: '/my-cards',
-        name: 'my-cards',
-        builder: (context, state) => const MyCardsPage(),
-      ),
-      GoRoute(
-        path: '/rules',
-        name: 'rules',
-        builder: (context, state) => const RulesPage(),
+        path: '/contacts/:id',
+        name: 'contact-detail',
+        builder: (context, state) => ContactDetailPage(contactId: state.pathParameters['id']!),
       ),
     ],
   );

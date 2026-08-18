@@ -1,3 +1,3 @@
-# between_three_mobile
+# Lendly mobile
 
-A new Flutter project.
+Flutter app for Lendly. See the [root README](../README.md) for setup instructions.

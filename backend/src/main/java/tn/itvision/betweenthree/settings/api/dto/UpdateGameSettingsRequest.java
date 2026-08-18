@@ -1,9 +1,0 @@
-package tn.itvision.betweenthree.settings.api.dto;
-
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-
-public record UpdateGameSettingsRequest(
-    @Min(1) @Max(50) int powerCardsPerPlayer
-) {
-}

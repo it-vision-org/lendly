@@ -1,10 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET"/>
-    <!-- Voice chat (LiveKit): capturing and routing the microphone -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <application
-        android:label="between_three_mobile"
+        android:label="Lendly"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

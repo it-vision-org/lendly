@@ -1,11 +1,11 @@
 spring:
   application:
-    name: between-three-api
+    name: lendly-api
 
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/between_three_us}
-    username: ${DATABASE_USERNAME:game_user}
-    password: ${DATABASE_PASSWORD:game_password}
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/lendly}
+    username: ${DATABASE_USERNAME:lendly_user}
+    password: ${DATABASE_PASSWORD:lendly_password}
 
   jpa:
     open-in-view: false
@@ -47,29 +47,7 @@ app:
     access-token-secret: ${JWT_ACCESS_SECRET:local-access-secret-change-me}
     refresh-token-secret: ${JWT_REFRESH_SECRET:local-refresh-secret-change-me}
 
-  livekit:
-    api-key: ${LIVEKIT_API_KEY:}
-    api-secret: ${LIVEKIT_API_SECRET:}
-    ws-url: ${LIVEKIT_URL:}
-    token-expiration: PT6H
-
-  seed:
-    enabled: ${APP_SEED_ENABLED:true}
-    players:
-      - public-id: AHMED
-        display-name: أحمد
-        pin: ${SEED_PIN_AHMED:0000}
-        role: ADMIN
-      - public-id: RAHMA
-        display-name: رحمة
-        pin: ${SEED_PIN_RAHMA:0000}
-        role: PLAYER
-      - public-id: MAMTI
-        display-name: مامتي
-        pin: ${SEED_PIN_MAMTI:0000}
-        role: PLAYER
-
 logging:
   level:
     root: INFO
-    tn.itvision.betweenthree: DEBUG
+    com.lendly: DEBUG

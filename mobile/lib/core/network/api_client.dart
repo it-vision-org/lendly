@@ -45,11 +45,11 @@ class _AuthInterceptor extends Interceptor {
   final TokenStorage _tokenStorage;
   Future<StoredTokens?>? _refreshInFlight;
 
-  // Only login/refresh are callable without a token; every other endpoint —
-  // including /auth/me and /auth/me/pin — is an authenticated call and must
-  // get the Authorization header (a blanket "any /auth/ path" check used to
+  // Only register/login/refresh are callable without a token; every other
+  // endpoint — including /auth/me — is an authenticated call and must get
+  // the Authorization header (a blanket "any /auth/ path" check used to
   // strip it from those too, which silently made them anonymous requests).
-  static const _publicAuthPaths = {'/auth/login', '/auth/refresh'};
+  static const _publicAuthPaths = {'/auth/register', '/auth/login', '/auth/refresh'};
 
   bool _isPublicAuthPath(String path) => _publicAuthPaths.any((p) => path.endsWith(p));
 

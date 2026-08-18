@@ -16,11 +16,34 @@ class AuthRepository {
   final Dio _dio;
   final TokenStorage _tokenStorage;
 
-  Future<UserSummary> login({required String publicId, required String pin}) async {
+  Future<UserSummary> register({
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/register',
+        data: {
+          'firstName': firstName,
+          'lastName': lastName,
+          'email': email,
+          'password': password,
+          'deviceInfo': 'flutter-app',
+        },
+      );
+      return _saveTokensAndReturnUser(response.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<UserSummary> login({required String email, required String password}) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/login',
-        data: {'publicId': publicId, 'pin': pin, 'deviceInfo': 'flutter-app'},
+        data: {'email': email, 'password': password, 'deviceInfo': 'flutter-app'},
       );
       return _saveTokensAndReturnUser(response.data!);
     } on DioException catch (e) {
@@ -44,17 +67,6 @@ class AuthRepository {
         return null;
       }
       rethrow;
-    }
-  }
-
-  Future<void> changePin({required String currentPin, required String newPin}) async {
-    try {
-      await _dio.patch<void>(
-        '/auth/me/pin',
-        data: {'currentPin': currentPin, 'newPin': newPin},
-      );
-    } on DioException catch (e) {
-      throw ApiException.fromDioException(e);
     }
   }
 

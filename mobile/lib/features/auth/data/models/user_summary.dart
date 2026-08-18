@@ -1,24 +1,24 @@
 class UserSummary {
   const UserSummary({
     required this.id,
-    required this.publicId,
-    required this.displayName,
-    required this.role,
+    required this.firstName,
+    required this.lastName,
+    required this.email,
   });
 
   factory UserSummary.fromJson(Map<String, dynamic> json) {
     return UserSummary(
       id: json['id'] as String,
-      publicId: json['publicId'] as String,
-      displayName: json['displayName'] as String,
-      role: json['role'] as String,
+      firstName: json['firstName'] as String,
+      lastName: json['lastName'] as String,
+      email: json['email'] as String,
     );
   }
 
   final String id;
-  final String publicId;
-  final String displayName;
-  final String role;
+  final String firstName;
+  final String lastName;
+  final String email;
 
-  bool get isAdmin => role == 'ADMIN';
+  String get fullName => '$firstName $lastName';
 }

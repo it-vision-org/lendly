@@ -1,29 +1,29 @@
-import 'package:between_three_mobile/core/network/api_exception.dart';
+import 'package:lendly/core/network/api_exception.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('ApiException.fromDioException', () {
     test('parses the backend ErrorResponse body', () {
-      final requestOptions = RequestOptions(path: '/sessions/123/start');
+      final requestOptions = RequestOptions(path: '/transactions/123/repayments');
       final dioException = DioException(
         requestOptions: requestOptions,
         response: Response(
           requestOptions: requestOptions,
-          statusCode: 409,
+          statusCode: 400,
           data: {
-            'status': 409,
-            'code': 'NOT_ENOUGH_PLAYERS',
-            'message': 'At least two players are required to start a session',
+            'status': 400,
+            'code': 'REPAYMENT_EXCEEDS_REMAINING',
+            'message': 'Repayment amount cannot exceed the remaining balance',
           },
         ),
       );
 
       final apiException = ApiException.fromDioException(dioException);
 
-      expect(apiException.status, 409);
-      expect(apiException.code, 'NOT_ENOUGH_PLAYERS');
-      expect(apiException.isConflict, isTrue);
+      expect(apiException.status, 400);
+      expect(apiException.code, 'REPAYMENT_EXCEEDS_REMAINING');
+      expect(apiException.isConflict, isFalse);
       expect(apiException.isUnauthorized, isFalse);
     });
 
