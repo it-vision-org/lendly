@@ -24,22 +24,42 @@ class AuthRepository {
   /// Starts signup. No session is created yet — the account is unverified
   /// until [verifyEmail] succeeds with the code sent to [email].
   Future<EmailVerificationChallenge> register({
-    required String firstName,
-    required String lastName,
+    required String fullName,
     required String email,
     required String password,
   }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/auth/register',
-        data: {
-          'firstName': firstName,
-          'lastName': lastName,
-          'email': email,
-          'password': password,
-        },
+        data: {'fullName': fullName, 'email': email, 'password': password},
       );
       return EmailVerificationChallenge.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<UserSummary> updateProfile({required String fullName}) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/auth/me',
+        data: {'fullName': fullName},
+      );
+      return UserSummary.fromJson(response.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      await _dio.patch<void>(
+        '/auth/me/password',
+        data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

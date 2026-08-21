@@ -6,11 +6,10 @@ import com.lendly.identity.domain.User;
 
 public record UserSummary(
     UUID id,
-    String firstName,
-    String lastName,
+    String fullName,
     String email
 ) {
     public static UserSummary from(User user) {
-        return new UserSummary(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail());
+        return new UserSummary(user.getId(), user.getFullName(), user.getEmail());
     }
 }

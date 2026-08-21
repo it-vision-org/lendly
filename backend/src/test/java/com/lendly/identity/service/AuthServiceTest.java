@@ -65,7 +65,7 @@ class AuthServiceTest {
 
     @Test
     void loginWithCorrectPasswordButUnverifiedEmailDoesNotIssueTokens() {
-        User user = new User("Ahmed", "Zouaghi", "ahmed@example.com", "hashed-password");
+        User user = new User("Ahmed Zouaghi", "ahmed@example.com", "hashed-password");
         user.setId(UUID.randomUUID());
 
         when(userRepository.findByEmail("ahmed@example.com")).thenReturn(Optional.of(user));
@@ -84,7 +84,7 @@ class AuthServiceTest {
 
     @Test
     void loginWithCorrectPasswordAndVerifiedEmailIssuesTokens() {
-        User user = new User("Ahmed", "Zouaghi", "ahmed@example.com", "hashed-password");
+        User user = new User("Ahmed Zouaghi", "ahmed@example.com", "hashed-password");
         user.setId(UUID.randomUUID());
         user.setEmailVerifiedAt(Instant.now());
 
@@ -102,7 +102,7 @@ class AuthServiceTest {
 
     @Test
     void loginWithWrongPasswordFailsRegardlessOfVerificationState() {
-        User user = new User("Ahmed", "Zouaghi", "ahmed@example.com", "hashed-password");
+        User user = new User("Ahmed Zouaghi", "ahmed@example.com", "hashed-password");
         when(userRepository.findByEmail("ahmed@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-password", "hashed-password")).thenReturn(false);
 

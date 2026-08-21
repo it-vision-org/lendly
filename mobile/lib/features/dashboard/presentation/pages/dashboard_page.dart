@@ -19,7 +19,7 @@ class DashboardPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Image.asset('assets/images/home-screen.png', height: 40),
-      ), 
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/transactions/new'),
         icon: const Icon(Icons.add),

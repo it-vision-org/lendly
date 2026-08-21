@@ -22,19 +22,20 @@ class AuthController extends AsyncNotifier<UserSummary?> {
   }
 
   Future<EmailVerificationChallenge> register({
-    required String firstName,
-    required String lastName,
+    required String fullName,
     required String email,
     required String password,
   }) {
     return ref
         .read(authRepositoryProvider)
-        .register(
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          password: password,
-        );
+        .register(fullName: fullName, email: email, password: password);
+  }
+
+  Future<void> updateProfile({required String fullName}) async {
+    final user = await ref
+        .read(authRepositoryProvider)
+        .updateProfile(fullName: fullName);
+    state = AsyncData(user);
   }
 
   Future<LoginResult> login({

@@ -4,37 +4,36 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/network/error_messages.dart';
 import '../../../../core/widgets/password_field.dart';
-import '../controllers/auth_controller.dart';
-import 'verify_email_args.dart';
+import '../../../auth/data/repositories/auth_repository.dart';
 
-class RegisterPage extends ConsumerStatefulWidget {
-  const RegisterPage({super.key});
+class ChangePasswordPage extends ConsumerStatefulWidget {
+  const ChangePasswordPage({super.key});
 
   @override
-  ConsumerState<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<ChangePasswordPage> createState() => _ChangePasswordPageState();
 }
 
-class _RegisterPageState extends ConsumerState<RegisterPage> {
+class _ChangePasswordPageState extends ConsumerState<ChangePasswordPage> {
   final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   bool _isSaving = false;
   String? _error;
 
   @override
   void dispose() {
-    _fullNameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create account')),
+      appBar: AppBar(title: const Text('Change password')),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -43,35 +42,33 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  controller: _fullNameController,
+                PasswordField(
+                  controller: _currentPasswordController,
                   enabled: !_isSaving,
-                  textCapitalization: TextCapitalization.words,
-                  autofillHints: const [AutofillHints.name],
-                  decoration: const InputDecoration(labelText: 'Full name'),
-                  validator: (value) => (value == null || value.trim().isEmpty)
-                      ? 'Required'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _emailController,
-                  enabled: !_isSaving,
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (value) => (value == null || !value.contains('@'))
-                      ? 'Enter a valid email'
+                  labelText: 'Current password',
+                  autofillHints: const [AutofillHints.password],
+                  validator: (value) => (value == null || value.isEmpty)
+                      ? 'Enter your current password'
                       : null,
                 ),
                 const SizedBox(height: 16),
                 PasswordField(
-                  controller: _passwordController,
+                  controller: _newPasswordController,
                   enabled: !_isSaving,
-                  labelText: 'Password',
+                  labelText: 'New password',
                   autofillHints: const [AutofillHints.newPassword],
                   validator: (value) => (value == null || value.length < 8)
                       ? 'At least 8 characters'
+                      : null,
+                ),
+                const SizedBox(height: 16),
+                PasswordField(
+                  controller: _confirmPasswordController,
+                  enabled: !_isSaving,
+                  labelText: 'Confirm new password',
+                  autofillHints: const [AutofillHints.newPassword],
+                  validator: (value) => value != _newPasswordController.text
+                      ? 'Passwords do not match'
                       : null,
                   onFieldSubmitted: (_) => _submit(),
                 ),
@@ -96,12 +93,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Sign up'),
-                ),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: _isSaving ? null : () => context.pop(),
-                  child: const Text('Already have an account? Log in'),
+                      : const Text('Update password'),
                 ),
               ],
             ),
@@ -121,27 +113,19 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       _error = null;
     });
 
-    final email = _emailController.text.trim();
-
     try {
-      final challenge = await ref
-          .read(authControllerProvider.notifier)
-          .register(
-            fullName: _fullNameController.text.trim(),
-            email: email,
-            password: _passwordController.text,
+      await ref
+          .read(authRepositoryProvider)
+          .changePassword(
+            currentPassword: _currentPasswordController.text,
+            newPassword: _newPasswordController.text,
           );
-
-      if (!mounted) return;
-      setState(() => _isSaving = false);
-      context.push(
-        '/verify-email',
-        extra: VerifyEmailArgs(
-          verificationId: challenge.verificationId,
-          email: email,
-          resendCooldownSeconds: challenge.resendCooldownSeconds,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Password updated')));
+        context.pop();
+      }
     } catch (error) {
       setState(() {
         _isSaving = false;

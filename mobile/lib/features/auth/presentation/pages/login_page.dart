@@ -42,14 +42,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Lendly',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
+                  Image.asset('assets/images/home-screen.png', height: 60),
+                  const SizedBox(height: 12),
                   Text(
                     'Log in to keep track of who owes who',
                     style: Theme.of(context).textTheme.bodyLarge,

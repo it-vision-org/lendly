@@ -10,8 +10,7 @@ void main() {
       () {
         const user = UserSummary(
           id: 'u-1',
-          firstName: 'Ahmed',
-          lastName: 'Zouaghi',
+          fullName: 'Ahmed Zouaghi',
           email: 'ahmed@example.com',
         );
 

@@ -12,6 +12,8 @@ import '../../features/contacts/presentation/pages/contact_detail_page.dart';
 import '../../features/contacts/presentation/pages/contact_form_page.dart';
 import '../../features/contacts/presentation/pages/contacts_page.dart';
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
+import '../../features/profile/presentation/pages/change_password_page.dart';
+import '../../features/profile/presentation/pages/edit_name_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
 import '../../features/transactions/data/models/transaction.dart';
@@ -155,6 +157,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'contact-detail',
         builder: (context, state) =>
             ContactDetailPage(contactId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/profile/edit-name',
+        name: 'profile-edit-name',
+        builder: (context, state) =>
+            EditNamePage(currentName: state.extra as String),
+      ),
+      GoRoute(
+        path: '/profile/change-password',
+        name: 'profile-change-password',
+        builder: (context, state) => const ChangePasswordPage(),
       ),
     ],
   );

@@ -39,7 +39,7 @@ class TransactionServiceIntegrationTest extends IntegrationTestSupport {
     private PasswordEncoder passwordEncoder;
 
     private User createUser(String email) {
-        User user = new User("Test", "User", email, passwordEncoder.encode("password123"));
+        User user = new User("Test User", email, passwordEncoder.encode("password123"));
         return userRepository.save(user);
     }
 

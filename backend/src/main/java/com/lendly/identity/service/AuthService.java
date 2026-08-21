@@ -52,7 +52,7 @@ public class AuthService {
     }
 
     @Transactional
-    public EmailVerificationChallengeResponse register(String firstName, String lastName, String email, String password, String ipAddress) {
+    public EmailVerificationChallengeResponse register(String fullName, String email, String password, String ipAddress) {
         String normalizedEmail = email.trim().toLowerCase();
         User user = userRepository.findByEmail(normalizedEmail).orElse(null);
 
@@ -61,17 +61,32 @@ public class AuthService {
         }
 
         if (user == null) {
-            user = new User(firstName.trim(), lastName.trim(), normalizedEmail, passwordEncoder.encode(password));
+            user = new User(fullName.trim(), normalizedEmail, passwordEncoder.encode(password));
         } else {
             // Abandoned/unverified signup for this email: update the pending
             // account instead of creating a duplicate user row.
-            user.setFirstName(firstName.trim());
-            user.setLastName(lastName.trim());
+            user.setFullName(fullName.trim());
             user.setPasswordHash(passwordEncoder.encode(password));
         }
         userRepository.save(user);
 
         return emailVerificationService.startVerification(user, ipAddress);
+    }
+
+    @Transactional
+    public UserSummary updateProfile(User user, String fullName) {
+        user.setFullName(fullName.trim());
+        userRepository.save(user);
+        return UserSummary.from(user);
+    }
+
+    @Transactional
+    public void changePassword(User user, String currentPassword, String newPassword) {
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw ApiException.badRequest("INVALID_CURRENT_PASSWORD", "Current password is incorrect");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
     }
 
     @Transactional

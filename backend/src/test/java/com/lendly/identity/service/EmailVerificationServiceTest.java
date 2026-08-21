@@ -67,7 +67,7 @@ class EmailVerificationServiceTest {
             return saved;
         });
 
-        user = new User("Ahmed", "Zouaghi", "ahmed@example.com", "hashed-password");
+        user = new User("Ahmed Zouaghi", "ahmed@example.com", "hashed-password");
         user.setId(UUID.randomUUID());
     }
 
