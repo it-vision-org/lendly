@@ -36,7 +36,11 @@ flutter_native_splash:
   image: assets/images/splash-screen.png
   android_12:
     color: "#0B1F3A"
-    image: assets/images/splash-screen.png
+    # Android 12+'s native splash API renders this inside a small fixed-size
+    # icon window (not full-screen), so it needs a square icon-shaped asset —
+    # the wide icon+wordmark lockup used for `image` above gets badly cropped
+    # here. app_icon.png is already shaped correctly for this.
+    image: assets/icons/app_icon.png
 
 flutter:
   uses-material-design: true
