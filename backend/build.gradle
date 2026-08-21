@@ -66,3 +66,13 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+tasks.named('bootRun') {
+	// Some local networks advertise an IPv6 address without actually routing
+	// it (DNS returns a working AAAA record, but it's unreachable), which
+	// makes the JVM's default IPv6-preferring connection attempts to Neon
+	// fail with UnknownHostException even though IPv4 works fine. Force IPv4
+	// for local dev runs; production (Render) is unaffected since it doesn't
+	// use this task.
+	jvmArgs += ['-Djava.net.preferIPv4Stack=true']
+}

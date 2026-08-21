@@ -42,7 +42,11 @@ class TransactionsPage extends ConsumerWidget {
                         child: ChoiceChip(
                           label: Text(tab.$2),
                           selected: selectedFilter == tab.$1,
-                          onSelected: (_) => ref.read(transactionsFilterProvider.notifier).state = tab.$1,
+                          onSelected: (_) =>
+                              ref
+                                      .read(transactionsFilterProvider.notifier)
+                                      .state =
+                                  tab.$1,
                         ),
                       ),
                     )
@@ -52,12 +56,15 @@ class TransactionsPage extends ConsumerWidget {
           ),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () => ref.read(transactionsControllerProvider.notifier).refresh(),
+              onRefresh: () =>
+                  ref.read(transactionsControllerProvider.notifier).refresh(),
               child: transactionsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => ErrorView(
                   error: error,
-                  onRetry: () => ref.read(transactionsControllerProvider.notifier).refresh(),
+                  onRetry: () => ref
+                      .read(transactionsControllerProvider.notifier)
+                      .refresh(),
                 ),
                 data: (transactions) {
                   if (transactions.isEmpty) {
@@ -82,7 +89,8 @@ class TransactionsPage extends ConsumerWidget {
                       final transaction = transactions[index];
                       return TransactionTile(
                         transaction: transaction,
-                        onTap: () => context.push('/transactions/${transaction.id}'),
+                        onTap: () =>
+                            context.push('/transactions/${transaction.id}'),
                       );
                     },
                   );

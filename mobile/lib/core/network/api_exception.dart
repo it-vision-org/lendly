@@ -13,9 +13,13 @@ class ApiException implements Exception {
     final data = error.response?.data;
     if (data is Map<String, dynamic>) {
       return ApiException(
-        status: (data['status'] as num?)?.toInt() ?? error.response?.statusCode ?? 0,
+        status:
+            (data['status'] as num?)?.toInt() ??
+            error.response?.statusCode ??
+            0,
         code: data['code'] as String? ?? 'UNKNOWN_ERROR',
-        message: data['message'] as String? ?? error.message ?? 'Unexpected error',
+        message:
+            data['message'] as String? ?? error.message ?? 'Unexpected error',
       );
     }
 

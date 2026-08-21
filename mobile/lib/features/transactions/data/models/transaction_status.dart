@@ -4,16 +4,16 @@ enum TransactionStatus {
   paid;
 
   String get apiValue => switch (this) {
-        TransactionStatus.active => 'ACTIVE',
-        TransactionStatus.partiallyPaid => 'PARTIALLY_PAID',
-        TransactionStatus.paid => 'PAID',
-      };
+    TransactionStatus.active => 'ACTIVE',
+    TransactionStatus.partiallyPaid => 'PARTIALLY_PAID',
+    TransactionStatus.paid => 'PAID',
+  };
 
   String get label => switch (this) {
-        TransactionStatus.active => 'Active',
-        TransactionStatus.partiallyPaid => 'Partially paid',
-        TransactionStatus.paid => 'Paid',
-      };
+    TransactionStatus.active => 'Active',
+    TransactionStatus.partiallyPaid => 'Partially paid',
+    TransactionStatus.paid => 'Paid',
+  };
 
   static TransactionStatus fromApiValue(String value) {
     return switch (value) {

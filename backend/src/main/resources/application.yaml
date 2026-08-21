@@ -46,6 +46,12 @@ app:
     refresh-token-expiration: P30D
     access-token-secret: ${JWT_ACCESS_SECRET:local-access-secret-change-me}
     refresh-token-secret: ${JWT_REFRESH_SECRET:local-refresh-secret-change-me}
+    email-verification-secret: ${EMAIL_VERIFICATION_SECRET:local-email-verification-secret-change-me}
+
+  email:
+    resend-api-key: ${RESEND_API_KEY:}
+    from-email: ${RESEND_FROM_EMAIL:verification@flex-tn.com}
+    from-name: ${RESEND_FROM_NAME:Flex}
 
 logging:
   level:

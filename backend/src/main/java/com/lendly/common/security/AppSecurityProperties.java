@@ -9,6 +9,7 @@ public record AppSecurityProperties(
     Duration accessTokenExpiration,
     Duration refreshTokenExpiration,
     String accessTokenSecret,
-    String refreshTokenSecret
+    String refreshTokenSecret,
+    String emailVerificationSecret
 ) {
 }

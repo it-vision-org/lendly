@@ -34,7 +34,10 @@ class TransactionDetailPage extends ConsumerWidget {
           detailAsync.whenOrNull(
                 data: (detail) => IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => context.push('/transactions/${detail.transaction.id}/edit', extra: detail.transaction),
+                  onPressed: () => context.push(
+                    '/transactions/${detail.transaction.id}/edit',
+                    extra: detail.transaction,
+                  ),
                 ),
               ) ??
               const SizedBox.shrink(),
@@ -48,7 +51,8 @@ class TransactionDetailPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(
           error: error,
-          onRetry: () => ref.invalidate(transactionDetailProvider(transactionId)),
+          onRetry: () =>
+              ref.invalidate(transactionDetailProvider(transactionId)),
         ),
         data: (detail) {
           final transaction = detail.transaction;
@@ -67,27 +71,48 @@ class TransactionDetailPage extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Icon(isLent ? Icons.north_east : Icons.south_west, color: color),
+                          Icon(
+                            isLent ? Icons.north_east : Icons.south_west,
+                            color: color,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            isLent ? 'You lent to ${transaction.contactName}' : 'You borrowed from ${transaction.contactName}',
+                            isLent
+                                ? 'You lent to ${transaction.contactName}'
+                                : 'You borrowed from ${transaction.contactName}',
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      _row(context, 'Original amount', formatMoney(transaction.originalAmount, transaction.currency)),
+                      _row(
+                        context,
+                        'Original amount',
+                        formatMoney(
+                          transaction.originalAmount,
+                          transaction.currency,
+                        ),
+                      ),
                       const SizedBox(height: 8),
                       _row(
                         context,
                         'Remaining',
-                        formatMoney(transaction.remainingAmount, transaction.currency),
-                        valueColor: transaction.isPaid ? semantic.success : color,
+                        formatMoney(
+                          transaction.remainingAmount,
+                          transaction.currency,
+                        ),
+                        valueColor: transaction.isPaid
+                            ? semantic.success
+                            : color,
                       ),
                       const SizedBox(height: 8),
                       _row(context, 'Status', transaction.status.label),
                       const SizedBox(height: 8),
-                      _row(context, 'Date', _dateFormat.format(transaction.transactionDate)),
+                      _row(
+                        context,
+                        'Date',
+                        _dateFormat.format(transaction.transactionDate),
+                      ),
                       if (transaction.description?.isNotEmpty == true) ...[
                         const SizedBox(height: 8),
                         _row(context, 'Description', transaction.description!),
@@ -103,7 +128,10 @@ class TransactionDetailPage extends ConsumerWidget {
                           alignment: Alignment.center,
                           child: Text(
                             'Fully paid',
-                            style: TextStyle(color: semantic.success, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                              color: semantic.success,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                       ],
@@ -115,7 +143,10 @@ class TransactionDetailPage extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Repayment history', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Repayment history',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   if (!transaction.isPaid)
                     TextButton.icon(
                       onPressed: () => _showAddRepaymentSheet(
@@ -133,7 +164,10 @@ class TransactionDetailPage extends ConsumerWidget {
               if (detail.repayments.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 24),
-                  child: EmptyState(icon: Icons.history, title: 'No repayments recorded yet'),
+                  child: EmptyState(
+                    icon: Icons.history,
+                    title: 'No repayments recorded yet',
+                  ),
                 )
               else
                 Card(
@@ -143,16 +177,27 @@ class TransactionDetailPage extends ConsumerWidget {
                         .map(
                           (repayment) => ListTile(
                             leading: const Icon(Icons.check_circle_outline),
-                            title: Text(formatMoney(repayment.amount, transaction.currency)),
+                            title: Text(
+                              formatMoney(
+                                repayment.amount,
+                                transaction.currency,
+                              ),
+                            ),
                             subtitle: Text(
                               [
                                 _dateFormat.format(repayment.paymentDate),
-                                if (repayment.notes?.isNotEmpty == true) repayment.notes!,
+                                if (repayment.notes?.isNotEmpty == true)
+                                  repayment.notes!,
                               ].join(' · '),
                             ),
                             trailing: IconButton(
                               icon: const Icon(Icons.delete_outline),
-                              onPressed: () => _deleteRepayment(context, ref, transaction.id, repayment.id),
+                              onPressed: () => _deleteRepayment(
+                                context,
+                                ref,
+                                transaction.id,
+                                repayment.id,
+                              ),
                             ),
                           ),
                         )
@@ -166,7 +211,12 @@ class TransactionDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _row(BuildContext context, String label, String value, {Color? valueColor}) {
+  Widget _row(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -176,9 +226,9 @@ class TransactionDetailPage extends ConsumerWidget {
             value,
             textAlign: TextAlign.end,
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: valueColor,
-                ),
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
           ),
         ),
       ],
@@ -189,6 +239,7 @@ class TransactionDetailPage extends ConsumerWidget {
     ref.invalidate(transactionDetailProvider(transactionId));
     ref.invalidate(transactionsControllerProvider);
     ref.invalidate(dashboardControllerProvider);
+    ref.invalidate(recentTransactionsProvider);
     ref.invalidate(contactsControllerProvider);
   }
 
@@ -223,20 +274,30 @@ class TransactionDetailPage extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Add repayment', style: Theme.of(sheetContext).textTheme.titleLarge),
+                    Text(
+                      'Add repayment',
+                      style: Theme.of(sheetContext).textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: amountController,
                       autofocus: true,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Amount',
-                        helperText: 'Remaining: ${formatMoney(remainingAmount, currency)}',
+                        helperText:
+                            'Remaining: ${formatMoney(remainingAmount, currency)}',
                       ),
                       validator: (value) {
                         final amount = num.tryParse(value ?? '');
-                        if (amount == null || amount <= 0) return 'Enter a valid amount';
-                        if (amount > remainingAmount) return 'Cannot exceed the remaining balance';
+                        if (amount == null || amount <= 0) {
+                          return 'Enter a valid amount';
+                        }
+                        if (amount > remainingAmount) {
+                          return 'Cannot exceed the remaining balance';
+                        }
                         return null;
                       },
                     ),
@@ -253,28 +314,43 @@ class TransactionDetailPage extends ConsumerWidget {
                           firstDate: DateTime(2000),
                           lastDate: DateTime.now().add(const Duration(days: 1)),
                         );
-                        if (picked != null) setSheetState(() => paymentDate = picked);
+                        if (picked != null) {
+                          setSheetState(() => paymentDate = picked);
+                        }
                       },
                     ),
                     TextFormField(
                       controller: notesController,
-                      decoration: const InputDecoration(labelText: 'Notes (optional)'),
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (optional)',
+                      ),
                     ),
                     if (error != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
-                        child: Text(error!, style: TextStyle(color: Theme.of(sheetContext).colorScheme.error)),
+                        child: Text(
+                          error!,
+                          style: TextStyle(
+                            color: Theme.of(sheetContext).colorScheme.error,
+                          ),
+                        ),
                       ),
                     const SizedBox(height: 16),
                     FilledButton(
                       onPressed: () async {
-                        if (!(formKey.currentState?.validate() ?? false)) return;
+                        if (!(formKey.currentState?.validate() ?? false)) {
+                          return;
+                        }
                         try {
-                          await ref.read(transactionRepositoryProvider).addRepayment(
+                          await ref
+                              .read(transactionRepositoryProvider)
+                              .addRepayment(
                                 transactionId: transactionId,
                                 amount: num.parse(amountController.text),
                                 paymentDate: paymentDate,
-                                notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
+                                notes: notesController.text.trim().isEmpty
+                                    ? null
+                                    : notesController.text.trim(),
                               );
                           _invalidateAfterMutation(ref);
                           if (sheetContext.mounted) Navigator.pop(sheetContext);
@@ -294,26 +370,49 @@ class TransactionDetailPage extends ConsumerWidget {
     );
   }
 
-  Future<void> _deleteRepayment(BuildContext context, WidgetRef ref, String transactionId, String repaymentId) async {
+  Future<void> _deleteRepayment(
+    BuildContext context,
+    WidgetRef ref,
+    String transactionId,
+    String repaymentId,
+  ) async {
     try {
-      await ref.read(transactionRepositoryProvider).deleteRepayment(transactionId: transactionId, repaymentId: repaymentId);
+      await ref
+          .read(transactionRepositoryProvider)
+          .deleteRepayment(
+            transactionId: transactionId,
+            repaymentId: repaymentId,
+          );
       _invalidateAfterMutation(ref);
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not delete repayment')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not delete repayment')),
+        );
       }
     }
   }
 
-  Future<void> _confirmDeleteTransaction(BuildContext context, WidgetRef ref) async {
+  Future<void> _confirmDeleteTransaction(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete transaction?'),
-        content: const Text('This will permanently remove the transaction and its repayment history.'),
+        content: const Text(
+          'This will permanently remove the transaction and its repayment history.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -324,11 +423,14 @@ class TransactionDetailPage extends ConsumerWidget {
       await ref.read(transactionRepositoryProvider).delete(transactionId);
       ref.invalidate(transactionsControllerProvider);
       ref.invalidate(dashboardControllerProvider);
+      ref.invalidate(recentTransactionsProvider);
       ref.invalidate(contactsControllerProvider);
       if (context.mounted) context.pop();
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not delete transaction')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not delete transaction')),
+        );
       }
     }
   }

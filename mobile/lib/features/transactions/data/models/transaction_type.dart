@@ -3,14 +3,14 @@ enum TransactionType {
   borrowed;
 
   String get apiValue => switch (this) {
-        TransactionType.lent => 'LENT',
-        TransactionType.borrowed => 'BORROWED',
-      };
+    TransactionType.lent => 'LENT',
+    TransactionType.borrowed => 'BORROWED',
+  };
 
   String get label => switch (this) {
-        TransactionType.lent => 'I lent',
-        TransactionType.borrowed => 'I borrowed',
-      };
+    TransactionType.lent => 'I lent',
+    TransactionType.borrowed => 'I borrowed',
+  };
 
   static TransactionType fromApiValue(String value) {
     return switch (value) {

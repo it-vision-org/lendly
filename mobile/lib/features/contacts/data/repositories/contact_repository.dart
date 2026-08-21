@@ -17,7 +17,9 @@ class ContactRepository {
   Future<List<Contact>> list() async {
     try {
       final response = await _dio.get<List<dynamic>>('/contacts');
-      return response.data!.map((e) => Contact.fromJson(e as Map<String, dynamic>)).toList();
+      return response.data!
+          .map((e) => Contact.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
@@ -32,7 +34,12 @@ class ContactRepository {
     }
   }
 
-  Future<Contact> create({required String name, String? phone, String? email, String? notes}) async {
+  Future<Contact> create({
+    required String name,
+    String? phone,
+    String? email,
+    String? notes,
+  }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/contacts',

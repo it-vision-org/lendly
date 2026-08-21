@@ -12,8 +12,11 @@ final _rawDioProvider = Provider<Dio>((ref) {
   return Dio(
     BaseOptions(
       baseUrl: Environment.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
+      // Generous timeouts: the hosted backend is on Render's free tier, which
+      // spins the service down when idle and can take up to ~60s to wake up
+      // on the next request.
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 90),
       headers: const {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
@@ -30,9 +33,7 @@ final dioProvider = Provider<Dio>((ref) {
   dio.interceptors.add(_AuthInterceptor(rawDio, tokenStorage));
 
   if (kDebugMode) {
-    dio.interceptors.add(
-      LogInterceptor(requestBody: true, responseBody: true),
-    );
+    dio.interceptors.add(LogInterceptor(requestBody: true, responseBody: true));
   }
 
   return dio;
@@ -45,13 +46,21 @@ class _AuthInterceptor extends Interceptor {
   final TokenStorage _tokenStorage;
   Future<StoredTokens?>? _refreshInFlight;
 
-  // Only register/login/refresh are callable without a token; every other
-  // endpoint — including /auth/me — is an authenticated call and must get
-  // the Authorization header (a blanket "any /auth/ path" check used to
-  // strip it from those too, which silently made them anonymous requests).
-  static const _publicAuthPaths = {'/auth/register', '/auth/login', '/auth/refresh'};
+  // Only these are callable without a token (they're what get someone from
+  // signed-out to signed-in); every other endpoint — including /auth/me — is
+  // an authenticated call and must get the Authorization header (a blanket
+  // "any /auth/ path" check used to strip it from those too, which silently
+  // made them anonymous requests).
+  static const _publicAuthPaths = {
+    '/auth/register',
+    '/auth/login',
+    '/auth/refresh',
+    '/auth/email-verification/verify',
+    '/auth/email-verification/resend',
+  };
 
-  bool _isPublicAuthPath(String path) => _publicAuthPaths.any((p) => path.endsWith(p));
+  bool _isPublicAuthPath(String path) =>
+      _publicAuthPaths.any((p) => path.endsWith(p));
 
   @override
   Future<void> onRequest(

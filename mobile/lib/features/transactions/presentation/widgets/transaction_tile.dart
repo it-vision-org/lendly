@@ -29,7 +29,10 @@ class TransactionTile extends StatelessWidget {
           color: amountColor,
         ),
       ),
-      title: Text(transaction.contactName, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        transaction.contactName,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Text(
         transaction.description?.isNotEmpty == true
             ? transaction.description!

@@ -5,7 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   group('ApiException.fromDioException', () {
     test('parses the backend ErrorResponse body', () {
-      final requestOptions = RequestOptions(path: '/transactions/123/repayments');
+      final requestOptions = RequestOptions(
+        path: '/transactions/123/repayments',
+      );
       final dioException = DioException(
         requestOptions: requestOptions,
         response: Response(

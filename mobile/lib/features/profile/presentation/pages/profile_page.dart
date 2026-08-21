@@ -18,7 +18,9 @@ class ProfilePage extends ConsumerWidget {
           CircleAvatar(
             radius: 36,
             child: Text(
-              user != null && user.firstName.isNotEmpty ? user.firstName[0].toUpperCase() : '?',
+              user != null && user.firstName.isNotEmpty
+                  ? user.firstName[0].toUpperCase()
+                  : '?',
               style: const TextStyle(fontSize: 28),
             ),
           ),

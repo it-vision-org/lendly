@@ -23,12 +23,14 @@ class ContactsPage extends ConsumerWidget {
         child: const Icon(Icons.person_add_alt_1),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(contactsControllerProvider.notifier).refresh(),
+        onRefresh: () =>
+            ref.read(contactsControllerProvider.notifier).refresh(),
         child: contactsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ErrorView(
             error: error,
-            onRetry: () => ref.read(contactsControllerProvider.notifier).refresh(),
+            onRetry: () =>
+                ref.read(contactsControllerProvider.notifier).refresh(),
           ),
           data: (contacts) {
             if (contacts.isEmpty) {
@@ -52,18 +54,32 @@ class ContactsPage extends ConsumerWidget {
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final contact = contacts[index];
-                final netColor = contact.netBalance >= 0 ? semantic.success : semantic.warning;
+                final netColor = contact.netBalance >= 0
+                    ? semantic.success
+                    : semantic.warning;
 
                 return ListTile(
                   onTap: () => context.push('/contacts/${contact.id}'),
-                  leading: CircleAvatar(child: Text(contact.name.isNotEmpty ? contact.name[0].toUpperCase() : '?')),
-                  title: Text(contact.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  leading: CircleAvatar(
+                    child: Text(
+                      contact.name.isNotEmpty
+                          ? contact.name[0].toUpperCase()
+                          : '?',
+                    ),
+                  ),
+                  title: Text(
+                    contact.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   subtitle: Text(
                     'Owed to me: ${formatMoney(contact.totalOwedToMe, 'TND')} · I owe: ${formatMoney(contact.totalIOwe, 'TND')}',
                   ),
                   trailing: Text(
                     formatMoney(contact.netBalance, 'TND'),
-                    style: TextStyle(fontWeight: FontWeight.w700, color: netColor),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: netColor,
+                    ),
                   ),
                 );
               },

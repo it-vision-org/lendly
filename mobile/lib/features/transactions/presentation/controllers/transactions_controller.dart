@@ -10,12 +10,16 @@ import '../../data/repositories/transaction_repository.dart';
 
 enum TransactionFilterTab { all, lent, borrowed, paid }
 
-final transactionsFilterProvider = StateProvider.autoDispose<TransactionFilterTab>(
-  (ref) => TransactionFilterTab.all,
-);
+final transactionsFilterProvider =
+    StateProvider.autoDispose<TransactionFilterTab>(
+      (ref) => TransactionFilterTab.all,
+    );
 
 final transactionsControllerProvider =
-    AsyncNotifierProvider.autoDispose<TransactionsController, List<Transaction>>(TransactionsController.new);
+    AsyncNotifierProvider.autoDispose<
+      TransactionsController,
+      List<Transaction>
+    >(TransactionsController.new);
 
 class TransactionsController extends AsyncNotifier<List<Transaction>> {
   @override
@@ -29,19 +33,25 @@ class TransactionsController extends AsyncNotifier<List<Transaction>> {
     return switch (filter) {
       TransactionFilterTab.all => repo.list(),
       TransactionFilterTab.lent => repo.list(type: TransactionType.lent),
-      TransactionFilterTab.borrowed => repo.list(type: TransactionType.borrowed),
+      TransactionFilterTab.borrowed => repo.list(
+        type: TransactionType.borrowed,
+      ),
       TransactionFilterTab.paid => repo.list(status: TransactionStatus.paid),
     };
   }
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => _fetch(ref.read(transactionsFilterProvider)));
+    state = await AsyncValue.guard(
+      () => _fetch(ref.read(transactionsFilterProvider)),
+    );
   }
 }
 
 /// A single contact's transaction history, for the contact detail screen.
-final contactTransactionsProvider =
-    FutureProvider.autoDispose.family<List<Transaction>, String>((ref, contactId) {
-  return ref.watch(transactionRepositoryProvider).list(contactId: contactId);
-});
+final contactTransactionsProvider = FutureProvider.autoDispose
+    .family<List<Transaction>, String>((ref, contactId) {
+      return ref
+          .watch(transactionRepositoryProvider)
+          .list(contactId: contactId);
+    });

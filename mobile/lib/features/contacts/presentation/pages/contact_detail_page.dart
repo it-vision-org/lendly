@@ -23,12 +23,17 @@ class ContactDetailPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: contactAsync.whenOrNull(data: (c) => Text(c.name)) ?? const Text('Contact'),
+        title:
+            contactAsync.whenOrNull(data: (c) => Text(c.name)) ??
+            const Text('Contact'),
         actions: [
           contactAsync.whenOrNull(
                 data: (contact) => IconButton(
                   icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => context.push('/contacts/${contact.id}/edit', extra: contact),
+                  onPressed: () => context.push(
+                    '/contacts/${contact.id}/edit',
+                    extra: contact,
+                  ),
                 ),
               ) ??
               const SizedBox.shrink(),
@@ -42,7 +47,9 @@ class ContactDetailPage extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => ErrorView(error: error),
         data: (contact) {
-          final transactionsAsync = ref.watch(contactTransactionsProvider(contactId));
+          final transactionsAsync = ref.watch(
+            contactTransactionsProvider(contactId),
+          );
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
@@ -54,22 +61,36 @@ class ContactDetailPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _row(context, 'Owed to me', formatMoney(contact.totalOwedToMe, 'TND'), semantic.success),
+                      _row(
+                        context,
+                        'Owed to me',
+                        formatMoney(contact.totalOwedToMe, 'TND'),
+                        semantic.success,
+                      ),
                       const SizedBox(height: 8),
-                      _row(context, 'I owe', formatMoney(contact.totalIOwe, 'TND'), semantic.warning),
+                      _row(
+                        context,
+                        'I owe',
+                        formatMoney(contact.totalIOwe, 'TND'),
+                        semantic.warning,
+                      ),
                       const Divider(height: 24),
                       _row(
                         context,
                         'Net balance',
                         formatMoney(contact.netBalance, 'TND'),
-                        contact.netBalance >= 0 ? semantic.success : semantic.warning,
+                        contact.netBalance >= 0
+                            ? semantic.success
+                            : semantic.warning,
                         bold: true,
                       ),
                     ],
                   ),
                 ),
               ),
-              if (contact.phone != null || contact.email != null || contact.notes != null) ...[
+              if (contact.phone != null ||
+                  contact.email != null ||
+                  contact.notes != null) ...[
                 const SizedBox(height: 12),
                 Card(
                   margin: EdgeInsets.zero,
@@ -78,8 +99,10 @@ class ContactDetailPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (contact.phone != null) Text('Phone: ${contact.phone}'),
-                        if (contact.email != null) Text('Email: ${contact.email}'),
+                        if (contact.phone != null)
+                          Text('Phone: ${contact.phone}'),
+                        if (contact.email != null)
+                          Text('Email: ${contact.email}'),
                         if (contact.notes != null) Text(contact.notes!),
                       ],
                     ),
@@ -87,7 +110,10 @@ class ContactDetailPage extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: 24),
-              Text('Transaction history', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Transaction history',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               transactionsAsync.when(
                 loading: () => const Padding(
@@ -112,7 +138,8 @@ class ContactDetailPage extends ConsumerWidget {
                           .map(
                             (t) => TransactionTile(
                               transaction: t,
-                              onTap: () => context.push('/transactions/${t.id}'),
+                              onTap: () =>
+                                  context.push('/transactions/${t.id}'),
                             ),
                           )
                           .toList(),
@@ -127,7 +154,13 @@ class ContactDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _row(BuildContext context, String label, String value, Color color, {bool bold = false}) {
+  Widget _row(
+    BuildContext context,
+    String label,
+    String value,
+    Color color, {
+    bool bold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -135,9 +168,9 @@ class ContactDetailPage extends ConsumerWidget {
         Text(
           value,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: color,
-                fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-              ),
+            color: color,
+            fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -148,10 +181,18 @@ class ContactDetailPage extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete contact?'),
-        content: const Text('This will remove the contact. Existing transactions stay in your history.'),
+        content: const Text(
+          'This will remove the contact. Existing transactions stay in your history.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -164,7 +205,9 @@ class ContactDetailPage extends ConsumerWidget {
       if (context.mounted) context.pop();
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not delete contact')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Could not delete contact')));
       }
     }
   }

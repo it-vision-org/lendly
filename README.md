@@ -41,6 +41,16 @@ set -a && source ../.env && set +a
 The API listens on `http://localhost:8080/api`. API docs are available at
 `http://localhost:8080/swagger-ui.html` while running.
 
+If the app fails to start with `UnknownHostException` connecting to Neon, but
+`ping`/`nslookup` show the hostname resolving to an IPv6 address that's
+unreachable on your network, your machine has a working IPv4 path but a
+broken IPv6 one. `./gradlew bootRun` already forces IPv4 for this reason; if
+you instead run the built jar directly, add the same flag:
+
+```bash
+java -Djava.net.preferIPv4Stack=true -jar build/libs/lendly-api-*.jar
+```
+
 Run tests (requires Docker for Testcontainers):
 
 ```bash

@@ -16,6 +16,8 @@ import com.lendly.common.api.ApiException;
 import com.lendly.common.security.AppSecurityProperties;
 import com.lendly.common.security.JwtTokenService;
 import com.lendly.identity.api.dto.AuthResponse;
+import com.lendly.identity.api.dto.EmailVerificationChallengeResponse;
+import com.lendly.identity.api.dto.LoginResponse;
 import com.lendly.identity.api.dto.UserSummary;
 import com.lendly.identity.domain.RefreshToken;
 import com.lendly.identity.domain.User;
@@ -30,6 +32,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenService jwtTokenService;
     private final AppSecurityProperties securityProperties;
+    private final EmailVerificationService emailVerificationService;
     private final SecureRandom secureRandom = new SecureRandom();
 
     public AuthService(
@@ -37,30 +40,42 @@ public class AuthService {
         RefreshTokenRepository refreshTokenRepository,
         PasswordEncoder passwordEncoder,
         JwtTokenService jwtTokenService,
-        AppSecurityProperties securityProperties
+        AppSecurityProperties securityProperties,
+        EmailVerificationService emailVerificationService
     ) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenService = jwtTokenService;
         this.securityProperties = securityProperties;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
-    public AuthResponse register(String firstName, String lastName, String email, String password, String deviceInfo) {
+    public EmailVerificationChallengeResponse register(String firstName, String lastName, String email, String password, String ipAddress) {
         String normalizedEmail = email.trim().toLowerCase();
-        if (userRepository.existsByEmail(normalizedEmail)) {
+        User user = userRepository.findByEmail(normalizedEmail).orElse(null);
+
+        if (user != null && user.getEmailVerifiedAt() != null) {
             throw ApiException.conflict("EMAIL_ALREADY_USED", "An account with this email already exists");
         }
 
-        User user = new User(firstName.trim(), lastName.trim(), normalizedEmail, passwordEncoder.encode(password));
+        if (user == null) {
+            user = new User(firstName.trim(), lastName.trim(), normalizedEmail, passwordEncoder.encode(password));
+        } else {
+            // Abandoned/unverified signup for this email: update the pending
+            // account instead of creating a duplicate user row.
+            user.setFirstName(firstName.trim());
+            user.setLastName(lastName.trim());
+            user.setPasswordHash(passwordEncoder.encode(password));
+        }
         userRepository.save(user);
 
-        return issueTokenPair(user, deviceInfo);
+        return emailVerificationService.startVerification(user, ipAddress);
     }
 
     @Transactional
-    public AuthResponse login(String email, String password, String deviceInfo) {
+    public LoginResponse login(String email, String password, String deviceInfo, String ipAddress) {
         User user = userRepository.findByEmail(email.trim().toLowerCase())
             .orElseThrow(() -> ApiException.unauthorized("INVALID_CREDENTIALS", "Invalid email or password"));
 
@@ -68,6 +83,16 @@ public class AuthService {
             throw ApiException.unauthorized("INVALID_CREDENTIALS", "Invalid email or password");
         }
 
+        if (user.getEmailVerifiedAt() == null) {
+            EmailVerificationChallengeResponse challenge = emailVerificationService.startVerification(user, ipAddress);
+            return LoginResponse.verificationRequired(challenge);
+        }
+
+        return LoginResponse.authenticated(issueTokenPair(user, deviceInfo));
+    }
+
+    @Transactional
+    public AuthResponse completeVerifiedLogin(User user, String deviceInfo) {
         return issueTokenPair(user, deviceInfo);
     }
 

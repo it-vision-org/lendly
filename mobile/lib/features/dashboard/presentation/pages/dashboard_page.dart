@@ -17,19 +17,25 @@ class DashboardPage extends ConsumerWidget {
     final dashboardAsync = ref.watch(dashboardControllerProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Lendly')),
+      appBar: AppBar(
+        title: Image.asset('assets/images/home-screen.png', height: 40),
+      ), 
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/transactions/new'),
         icon: const Icon(Icons.add),
         label: const Text('Add transaction'),
       ),
       body: RefreshIndicator(
-        onRefresh: () => ref.read(dashboardControllerProvider.notifier).refresh(),
+        onRefresh: () async {
+          await ref.read(dashboardControllerProvider.notifier).refresh();
+          ref.invalidate(recentTransactionsProvider);
+        },
         child: dashboardAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => ErrorView(
             error: error,
-            onRetry: () => ref.read(dashboardControllerProvider.notifier).refresh(),
+            onRetry: () =>
+                ref.read(dashboardControllerProvider.notifier).refresh(),
           ),
           data: (summary) {
             final semantic = Theme.of(context).extension<AppSemanticColors>()!;
@@ -62,41 +68,194 @@ class DashboardPage extends ConsumerWidget {
                 _BalanceCard(
                   label: 'Net balance',
                   amount: summary.netBalance,
-                  color: summary.netBalance >= 0 ? semantic.success : semantic.warning,
+                  color: summary.netBalance >= 0
+                      ? semantic.success
+                      : semantic.warning,
                   icon: Icons.account_balance_wallet_outlined,
                   wide: true,
                 ),
                 const SizedBox(height: 24),
-                Text('Recent transactions', style: Theme.of(context).textTheme.titleMedium),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Recent transactions',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const _RecentTransactionsFilterControl(),
+                  ],
+                ),
                 const SizedBox(height: 8),
-                if (summary.recentTransactions.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32),
-                    child: EmptyState(
-                      icon: Icons.receipt_long_outlined,
-                      title: 'No transactions yet',
-                      message: 'Add the first amount you lent or borrowed.',
-                    ),
-                  )
-                else
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: Column(
-                      children: summary.recentTransactions
-                          .map(
-                            (transaction) => TransactionTile(
-                              transaction: transaction,
-                              onTap: () => context.push('/transactions/${transaction.id}'),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
+                const _RecentTransactionsList(),
               ],
             );
           },
         ),
       ),
+    );
+  }
+}
+
+const _recentFilterIcons = {
+  RecentTransactionsFilter.active: Icons.pending_actions_outlined,
+  RecentTransactionsFilter.paid: Icons.check_circle_outline,
+  RecentTransactionsFilter.all: Icons.list_alt_outlined,
+};
+
+class _RecentTransactionsFilterControl extends ConsumerWidget {
+  const _RecentTransactionsFilterControl();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(recentTransactionsFilterProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return PopupMenuButton<RecentTransactionsFilter>(
+      initialValue: selected,
+      onSelected: (value) =>
+          ref.read(recentTransactionsFilterProvider.notifier).state = value,
+      offset: const Offset(0, 8),
+      elevation: 4,
+      shadowColor: colorScheme.shadow.withValues(alpha: 0.16),
+      color: colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      padding: const EdgeInsets.all(6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      itemBuilder: (context) => RecentTransactionsFilter.values.map((filter) {
+        final isSelected = filter == selected;
+        return PopupMenuItem(
+          value: filter,
+          padding: EdgeInsets.zero,
+          height: 44,
+          child: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? colorScheme.primaryContainer
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  _recentFilterIcons[filter],
+                  size: 18,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    filter.label,
+                    style: TextStyle(
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected
+                          ? colorScheme.primary
+                          : colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                if (isSelected)
+                  Icon(Icons.check, size: 16, color: colorScheme.primary),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: colorScheme.outline),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _recentFilterIcons[selected],
+              size: 16,
+              color: colorScheme.primary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              selected.label,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.expand_more,
+              size: 18,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecentTransactionsList extends ConsumerWidget {
+  const _RecentTransactionsList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final transactionsAsync = ref.watch(recentTransactionsProvider);
+    final filter = ref.watch(recentTransactionsFilterProvider);
+
+    return transactionsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 32),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => ErrorView(
+        error: error,
+        onRetry: () => ref.invalidate(recentTransactionsProvider),
+      ),
+      data: (transactions) {
+        if (transactions.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            child: EmptyState(
+              icon: Icons.receipt_long_outlined,
+              title: switch (filter) {
+                RecentTransactionsFilter.active => 'No active transactions',
+                RecentTransactionsFilter.paid => 'No paid transactions yet',
+                RecentTransactionsFilter.all => 'No transactions yet',
+              },
+              message: filter == RecentTransactionsFilter.all
+                  ? 'Add the first amount you lent or borrowed.'
+                  : null,
+            ),
+          );
+        }
+
+        return Card(
+          margin: EdgeInsets.zero,
+          child: Column(
+            children: transactions
+                .map(
+                  (transaction) => TransactionTile(
+                    transaction: transaction,
+                    onTap: () =>
+                        context.push('/transactions/${transaction.id}'),
+                  ),
+                )
+                .toList(),
+          ),
+        );
+      },
     );
   }
 }
@@ -131,7 +290,10 @@ class _BalanceCard extends StatelessWidget {
                   const Spacer(),
                   Text(
                     formatMoney(amount, 'TND'),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color, fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               )
@@ -144,7 +306,10 @@ class _BalanceCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     formatMoney(amount, 'TND'),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color, fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ],
               ),

@@ -6,7 +6,9 @@ import '../../data/models/contact.dart';
 import '../../data/repositories/contact_repository.dart';
 
 final contactsControllerProvider =
-    AsyncNotifierProvider.autoDispose<ContactsController, List<Contact>>(ContactsController.new);
+    AsyncNotifierProvider.autoDispose<ContactsController, List<Contact>>(
+      ContactsController.new,
+    );
 
 class ContactsController extends AsyncNotifier<List<Contact>> {
   @override
@@ -16,11 +18,16 @@ class ContactsController extends AsyncNotifier<List<Contact>> {
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() => ref.read(contactRepositoryProvider).list());
+    state = await AsyncValue.guard(
+      () => ref.read(contactRepositoryProvider).list(),
+    );
   }
 }
 
 /// A single contact, fetched fresh (with up-to-date balances) for the detail screen.
-final contactProvider = FutureProvider.autoDispose.family<Contact, String>((ref, id) {
+final contactProvider = FutureProvider.autoDispose.family<Contact, String>((
+  ref,
+  id,
+) {
   return ref.watch(contactRepositoryProvider).get(id);
 });

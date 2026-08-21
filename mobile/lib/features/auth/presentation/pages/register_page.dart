@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/network/error_messages.dart';
+import '../../../../core/widgets/password_field.dart';
 import '../controllers/auth_controller.dart';
+import 'verify_email_args.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -19,6 +21,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _isSaving = false;
+  String? _error;
+
   @override
   void dispose() {
     _firstNameController.dispose();
@@ -30,9 +35,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Create account')),
       body: SafeArea(
@@ -48,20 +50,32 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     Expanded(
                       child: TextFormField(
                         controller: _firstNameController,
-                        enabled: !isLoading,
+                        enabled: !_isSaving,
                         textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(labelText: 'First name'),
-                        validator: (value) => (value == null || value.trim().isEmpty) ? 'Required' : null,
+                        autofillHints: const [AutofillHints.givenName],
+                        decoration: const InputDecoration(
+                          labelText: 'First name',
+                        ),
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                            ? 'Required'
+                            : null,
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: TextFormField(
                         controller: _lastNameController,
-                        enabled: !isLoading,
+                        enabled: !_isSaving,
                         textCapitalization: TextCapitalization.words,
-                        decoration: const InputDecoration(labelText: 'Last name'),
-                        validator: (value) => (value == null || value.trim().isEmpty) ? 'Required' : null,
+                        autofillHints: const [AutofillHints.familyName],
+                        decoration: const InputDecoration(
+                          labelText: 'Last name',
+                        ),
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                            ? 'Required'
+                            : null,
                       ),
                     ),
                   ],
@@ -69,37 +83,41 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _emailController,
-                  enabled: !isLoading,
+                  enabled: !_isSaving,
                   keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
                   decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (value) =>
-                      (value == null || !value.contains('@')) ? 'Enter a valid email' : null,
+                  validator: (value) => (value == null || !value.contains('@'))
+                      ? 'Enter a valid email'
+                      : null,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
+                PasswordField(
                   controller: _passwordController,
-                  enabled: !isLoading,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Password'),
+                  enabled: !_isSaving,
+                  labelText: 'Password',
+                  autofillHints: const [AutofillHints.newPassword],
                   validator: (value) => (value == null || value.length < 8)
                       ? 'At least 8 characters'
                       : null,
                   onFieldSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: 8),
-                if (authState.hasError)
+                if (_error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8, bottom: 8),
                     child: Text(
-                      friendlyErrorMessage(authState.error!),
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      _error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 const SizedBox(height: 16),
                 FilledButton(
-                  onPressed: isLoading ? null : _submit,
-                  child: isLoading
+                  onPressed: _isSaving ? null : _submit,
+                  child: _isSaving
                       ? const SizedBox(
                           width: 20,
                           height: 20,
@@ -109,7 +127,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 ),
                 const SizedBox(height: 12),
                 TextButton(
-                  onPressed: isLoading ? null : () => context.pop(),
+                  onPressed: _isSaving ? null : () => context.pop(),
                   child: const Text('Already have an account? Log in'),
                 ),
               ],
@@ -120,15 +138,43 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    ref.read(authControllerProvider.notifier).register(
-          firstName: _firstNameController.text.trim(),
-          lastName: _lastNameController.text.trim(),
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-        );
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    final email = _emailController.text.trim();
+
+    try {
+      final challenge = await ref
+          .read(authControllerProvider.notifier)
+          .register(
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
+            email: email,
+            password: _passwordController.text,
+          );
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      context.push(
+        '/verify-email',
+        extra: VerifyEmailArgs(
+          verificationId: challenge.verificationId,
+          email: email,
+          resendCooldownSeconds: challenge.resendCooldownSeconds,
+        ),
+      );
+    } catch (error) {
+      setState(() {
+        _isSaving = false;
+        _error = friendlyErrorMessage(error);
+      });
+    }
   }
 }

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/controllers/auth_controller.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/verify_email_args.dart';
+import '../../features/auth/presentation/pages/verify_email_page.dart';
 import '../../features/contacts/data/models/contact.dart';
 import '../../features/contacts/presentation/pages/contact_detail_page.dart';
 import '../../features/contacts/presentation/pages/contact_form_page.dart';
@@ -43,7 +45,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       final isLoggedIn = authState.value != null;
-      final isAuthRoute = location == '/login' || location == '/register';
+      final isAuthRoute =
+          location == '/login' ||
+          location == '/register' ||
+          location == '/verify-email';
 
       if (!isLoggedIn && !isAuthRoute) {
         return '/login';
@@ -54,14 +59,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', name: 'splash', builder: (context, state) => const SplashPage()),
-      GoRoute(path: '/login', name: 'login', builder: (context, state) => const LoginPage()),
-      GoRoute(path: '/register', name: 'register', builder: (context, state) => const RegisterPage()),
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        builder: (context, state) => const SplashPage(),
+      ),
+      GoRoute(
+        path: '/login',
+        name: 'login',
+        builder: (context, state) => const LoginPage(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: 'register',
+        builder: (context, state) => const RegisterPage(),
+      ),
+      GoRoute(
+        path: '/verify-email',
+        name: 'verify-email',
+        builder: (context, state) =>
+            VerifyEmailPage(args: state.extra as VerifyEmailArgs),
+      ),
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => MainShell(navigationShell: navigationShell),
+        builder: (context, state, navigationShell) =>
+            MainShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(
-            routes: [GoRoute(path: '/home', name: 'home', builder: (context, state) => const DashboardPage())],
+            routes: [
+              GoRoute(
+                path: '/home',
+                name: 'home',
+                builder: (context, state) => const DashboardPage(),
+              ),
+            ],
           ),
           StatefulShellBranch(
             routes: [
@@ -73,10 +103,22 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/contacts', name: 'contacts', builder: (context, state) => const ContactsPage())],
+            routes: [
+              GoRoute(
+                path: '/contacts',
+                name: 'contacts',
+                builder: (context, state) => const ContactsPage(),
+              ),
+            ],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: '/profile', name: 'profile', builder: (context, state) => const ProfilePage())],
+            routes: [
+              GoRoute(
+                path: '/profile',
+                name: 'profile',
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
           ),
         ],
       ),
@@ -105,12 +147,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/contacts/:id/edit',
         name: 'contact-edit',
-        builder: (context, state) => ContactFormPage(contact: state.extra as Contact?),
+        builder: (context, state) =>
+            ContactFormPage(contact: state.extra as Contact?),
       ),
       GoRoute(
         path: '/contacts/:id',
         name: 'contact-detail',
-        builder: (context, state) => ContactDetailPage(contactId: state.pathParameters['id']!),
+        builder: (context, state) =>
+            ContactDetailPage(contactId: state.pathParameters['id']!),
       ),
     ],
   );

@@ -20,7 +20,11 @@ class TransactionRepository {
 
   final Dio _dio;
 
-  Future<List<Transaction>> list({TransactionType? type, TransactionStatus? status, String? contactId}) async {
+  Future<List<Transaction>> list({
+    TransactionType? type,
+    TransactionStatus? status,
+    String? contactId,
+  }) async {
     try {
       final response = await _dio.get<List<dynamic>>(
         '/transactions',
@@ -30,7 +34,9 @@ class TransactionRepository {
           'contactId': ?contactId,
         },
       );
-      return response.data!.map((e) => Transaction.fromJson(e as Map<String, dynamic>)).toList();
+      return response.data!
+          .map((e) => Transaction.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
@@ -38,7 +44,9 @@ class TransactionRepository {
 
   Future<Transaction> get(String id) async {
     try {
-      final response = await _dio.get<Map<String, dynamic>>('/transactions/$id');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/transactions/$id',
+      );
       return Transaction.fromJson(response.data!);
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
@@ -108,8 +116,12 @@ class TransactionRepository {
 
   Future<List<Repayment>> listRepayments(String transactionId) async {
     try {
-      final response = await _dio.get<List<dynamic>>('/transactions/$transactionId/repayments');
-      return response.data!.map((e) => Repayment.fromJson(e as Map<String, dynamic>)).toList();
+      final response = await _dio.get<List<dynamic>>(
+        '/transactions/$transactionId/repayments',
+      );
+      return response.data!
+          .map((e) => Repayment.fromJson(e as Map<String, dynamic>))
+          .toList();
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }
@@ -136,9 +148,14 @@ class TransactionRepository {
     }
   }
 
-  Future<void> deleteRepayment({required String transactionId, required String repaymentId}) async {
+  Future<void> deleteRepayment({
+    required String transactionId,
+    required String repaymentId,
+  }) async {
     try {
-      await _dio.delete<void>('/transactions/$transactionId/repayments/$repaymentId');
+      await _dio.delete<void>(
+        '/transactions/$transactionId/repayments/$repaymentId',
+      );
     } on DioException catch (e) {
       throw ApiException.fromDioException(e);
     }

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/network/error_messages.dart';
+import '../../../../core/widgets/password_field.dart';
 import '../controllers/auth_controller.dart';
+import 'verify_email_args.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
@@ -17,6 +19,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _isSaving = false;
+  String? _error;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -26,9 +31,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
-
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -42,7 +44,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 children: [
                   Text(
                     'Lendly',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
@@ -54,38 +58,44 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailController,
-                    enabled: !isLoading,
+                    enabled: !_isSaving,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.email],
                     decoration: const InputDecoration(labelText: 'Email'),
                     validator: (value) =>
-                        (value == null || !value.contains('@')) ? 'Enter a valid email' : null,
+                        (value == null || !value.contains('@'))
+                        ? 'Enter a valid email'
+                        : null,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  PasswordField(
                     controller: _passwordController,
-                    enabled: !isLoading,
-                    obscureText: true,
+                    enabled: !_isSaving,
+                    labelText: 'Password',
                     textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    validator: (value) =>
-                        (value == null || value.isEmpty) ? 'Enter your password' : null,
+                    autofillHints: const [AutofillHints.password],
+                    validator: (value) => (value == null || value.isEmpty)
+                        ? 'Enter your password'
+                        : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: 8),
-                  if (authState.hasError)
+                  if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8, bottom: 8),
                       child: Text(
-                        friendlyErrorMessage(authState.error!),
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ),
                   const SizedBox(height: 16),
                   FilledButton(
-                    onPressed: isLoading ? null : _submit,
-                    child: isLoading
+                    onPressed: _isSaving ? null : _submit,
+                    child: _isSaving
                         ? const SizedBox(
                             width: 20,
                             height: 20,
@@ -95,7 +105,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: isLoading ? null : () => context.push('/register'),
+                    onPressed: _isSaving
+                        ? null
+                        : () => context.push('/register'),
                     child: const Text("Don't have an account? Sign up"),
                   ),
                 ],
@@ -107,13 +119,44 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    ref.read(authControllerProvider.notifier).login(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
+
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+
+    final email = _emailController.text.trim();
+
+    try {
+      final result = await ref
+          .read(authControllerProvider.notifier)
+          .login(email: email, password: _passwordController.text);
+
+      if (!mounted) return;
+
+      if (result.requiresVerification) {
+        setState(() => _isSaving = false);
+        context.push(
+          '/verify-email',
+          extra: VerifyEmailArgs(
+            verificationId: result.verification!.verificationId,
+            email: email,
+            resendCooldownSeconds: result.verification!.resendCooldownSeconds,
+          ),
         );
+        return;
+      }
+      // Successful login: authControllerProvider is now AsyncData(user) and
+      // the router redirects to /home automatically.
+    } catch (error) {
+      setState(() {
+        _isSaving = false;
+        _error = friendlyErrorMessage(error);
+      });
+    }
   }
 }
