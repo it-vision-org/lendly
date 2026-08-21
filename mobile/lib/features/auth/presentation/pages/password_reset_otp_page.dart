@@ -2,26 +2,27 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/network/error_messages.dart';
 import '../../../../core/utils/email_mask.dart';
 import '../../data/repositories/auth_repository.dart';
-import '../controllers/auth_controller.dart';
 import '../widgets/otp_code_field.dart';
-import 'verify_email_args.dart';
 
-class VerifyEmailPage extends ConsumerStatefulWidget {
-  const VerifyEmailPage({required this.args, super.key});
+const _initialResendCooldownSeconds = 60;
 
-  final VerifyEmailArgs args;
+class PasswordResetOtpPage extends ConsumerStatefulWidget {
+  const PasswordResetOtpPage({required this.email, super.key});
+
+  final String email;
 
   @override
-  ConsumerState<VerifyEmailPage> createState() => _VerifyEmailPageState();
+  ConsumerState<PasswordResetOtpPage> createState() =>
+      _PasswordResetOtpPageState();
 }
 
-class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
+class _PasswordResetOtpPageState extends ConsumerState<PasswordResetOtpPage> {
   final _otpKey = GlobalKey<OtpCodeFieldState>();
-  late String _verificationId = widget.args.verificationId;
 
   bool _isVerifying = false;
   bool _isResending = false;
@@ -32,7 +33,7 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
   @override
   void initState() {
     super.initState();
-    _startCooldown(widget.args.resendCooldownSeconds);
+    _startCooldown(_initialResendCooldownSeconds);
   }
 
   @override
@@ -70,7 +71,7 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Verify your email',
+                'Verify your identity',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
@@ -83,7 +84,7 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
                 textAlign: TextAlign.center,
               ),
               Text(
-                maskEmail(widget.args.email),
+                maskEmail(widget.email),
                 style: Theme.of(
                   context,
                 ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w700),
@@ -160,24 +161,23 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
     });
 
     try {
-      await ref
-          .read(authControllerProvider.notifier)
-          .verifyEmail(verificationId: _verificationId, code: code);
-      // On success authControllerProvider becomes AsyncData(user) and the
-      // router redirects to /home automatically.
+      final resetToken = await ref
+          .read(authRepositoryProvider)
+          .verifyPasswordResetCode(email: widget.email, code: code);
+      if (mounted) {
+        context.push('/password-reset/new-password', extra: resetToken);
+      }
     } catch (error) {
       _otpKey.currentState?.clear();
       if (mounted) {
         setState(() {
-          _isVerifying = false;
           _error = friendlyErrorMessage(error);
         });
       }
-      return;
-    }
-
-    if (mounted) {
-      setState(() => _isVerifying = false);
+    } finally {
+      if (mounted) {
+        setState(() => _isVerifying = false);
+      }
     }
   }
 
@@ -188,11 +188,10 @@ class _VerifyEmailPageState extends ConsumerState<VerifyEmailPage> {
     });
 
     try {
-      final challenge = await ref
+      await ref
           .read(authRepositoryProvider)
-          .resendVerificationCode(verificationId: _verificationId);
-      _verificationId = challenge.verificationId;
-      _startCooldown(challenge.resendCooldownSeconds);
+          .resendPasswordResetCode(email: widget.email);
+      _startCooldown(_initialResendCooldownSeconds);
     } catch (error) {
       setState(() => _error = friendlyErrorMessage(error));
     } finally {

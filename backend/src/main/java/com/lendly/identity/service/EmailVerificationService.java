@@ -12,10 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.lendly.common.api.ApiException;
 import com.lendly.common.security.AppSecurityProperties;
+import com.lendly.common.security.SecureTokens;
 import com.lendly.email.EmailService;
 import com.lendly.identity.api.dto.EmailVerificationChallengeResponse;
 import com.lendly.identity.domain.EmailVerification;
 import com.lendly.identity.domain.User;
+import com.lendly.identity.domain.VerificationPurpose;
 import com.lendly.identity.repository.EmailVerificationRepository;
 import com.lendly.identity.repository.UserRepository;
 
@@ -25,6 +27,7 @@ public class EmailVerificationService {
     private static final int CODE_LENGTH = 6;
     private static final Duration CODE_TTL = Duration.ofMinutes(10);
     private static final Duration RESEND_COOLDOWN = Duration.ofSeconds(60);
+    private static final Duration RESET_TOKEN_TTL = Duration.ofMinutes(10);
     private static final int MAX_ATTEMPTS = 5;
     private static final int MAX_SENDS_PER_USER_PER_HOUR = 5;
     private static final int MAX_SENDS_PER_IP_PER_HOUR = 10;
@@ -49,9 +52,10 @@ public class EmailVerificationService {
     }
 
     @Transactional
-    public EmailVerificationChallengeResponse startVerification(User user, String ipAddress) {
+    public EmailVerificationChallengeResponse startVerification(User user, VerificationPurpose purpose, String ipAddress) {
         Instant now = Instant.now();
-        Optional<EmailVerification> latestOpt = repository.findFirstByUserIdOrderByCreatedAtDesc(user.getId());
+        Optional<EmailVerification> latestOpt =
+            repository.findFirstByUserIdAndPurposeOrderByCreatedAtDesc(user.getId(), purpose);
 
         if (latestOpt.isPresent()) {
             EmailVerification latest = latestOpt.get();
@@ -62,12 +66,13 @@ public class EmailVerificationService {
             }
         }
 
-        enforceHourlyLimits(user, ipAddress, now);
-        repository.expireActiveForUser(user.getId(), now);
+        enforceHourlyLimits(user, purpose, ipAddress, now);
+        repository.expireActiveForUser(user.getId(), purpose, now);
 
         String code = generateCode();
         EmailVerification verification = new EmailVerification(
             user,
+            purpose,
             VerificationCodeHasher.hash(securityProperties.emailVerificationSecret(), code),
             now.plus(CODE_TTL),
             ipAddress
@@ -79,9 +84,9 @@ public class EmailVerificationService {
 
         emailService.send(
             user.getEmail(),
-            "Verify your email",
-            EmailVerificationTemplate.html(code),
-            EmailVerificationTemplate.text(code)
+            EmailVerificationTemplate.subjectFor(purpose),
+            EmailVerificationTemplate.html(code, purpose),
+            EmailVerificationTemplate.text(code, purpose)
         );
 
         return toChallengeResponse(verification, now);
@@ -92,6 +97,92 @@ public class EmailVerificationService {
         EmailVerification verification = repository.findById(verificationId)
             .orElseThrow(() -> ApiException.badRequest("INVALID_CODE", "Incorrect verification code."));
 
+        verifyAndConsumeCode(verification, code, VerificationPurpose.EMAIL_VERIFICATION);
+
+        User user = verification.getUser();
+        user.setEmailVerifiedAt(Instant.now());
+        userRepository.save(user);
+
+        return user;
+    }
+
+    /**
+     * Password-reset OTP verification, keyed by email rather than a
+     * verification id — returning an id only when the account exists would
+     * itself leak whether the email is registered. A missing account throws
+     * the exact same error as a wrong code so the two are indistinguishable
+     * to the caller.
+     */
+    @Transactional
+    public String verifyPasswordResetCode(String email, String code) {
+        User user = userRepository.findByEmail(email.trim().toLowerCase())
+            .orElseThrow(() -> ApiException.badRequest("INVALID_CODE", "Incorrect verification code."));
+
+        EmailVerification verification = repository
+            .findFirstByUserIdAndPurposeOrderByCreatedAtDesc(user.getId(), VerificationPurpose.PASSWORD_RESET)
+            .orElseThrow(() -> ApiException.badRequest("INVALID_CODE", "Incorrect verification code."));
+
+        verifyAndConsumeCode(verification, code, VerificationPurpose.PASSWORD_RESET);
+
+        Instant now = Instant.now();
+        String resetTokenPlain = SecureTokens.generate();
+        verification.setResetTokenHash(SecureTokens.hash(resetTokenPlain));
+        verification.setResetTokenExpiresAt(now.plus(RESET_TOKEN_TTL));
+        repository.save(verification);
+
+        return resetTokenPlain;
+    }
+
+    /**
+     * Consumes a password-reset authorization token, returning the user it
+     * was issued for. Single-use: {@code resetTokenConsumedAt} is set here
+     * and the entity's {@code @Version} column prevents two concurrent
+     * requests from both succeeding on the same token.
+     */
+    @Transactional
+    public User consumeResetToken(String resetTokenPlain) {
+        EmailVerification verification = repository.findByResetTokenHash(SecureTokens.hash(resetTokenPlain))
+            .filter(v -> v.getResetTokenExpiresAt() != null && v.getResetTokenExpiresAt().isAfter(Instant.now()))
+            .filter(v -> v.getResetTokenConsumedAt() == null)
+            .orElseThrow(() -> ApiException.badRequest(
+                "INVALID_RESET_TOKEN",
+                "This password reset request has expired. Start again."
+            ));
+
+        verification.setResetTokenConsumedAt(Instant.now());
+        repository.save(verification);
+
+        return verification.getUser();
+    }
+
+    @Transactional
+    public EmailVerificationChallengeResponse resend(UUID verificationId, String ipAddress) {
+        EmailVerification current = repository.findById(verificationId)
+            .orElseThrow(() -> ApiException.notFound("VERIFICATION_NOT_FOUND", "Verification session not found. Please sign up again."));
+
+        User user = current.getUser();
+        if (user.getEmailVerifiedAt() != null) {
+            throw ApiException.badRequest("ALREADY_VERIFIED", "This account is already verified.");
+        }
+
+        return startVerification(user, VerificationPurpose.EMAIL_VERIFICATION, ipAddress);
+    }
+
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void cleanupExpired() {
+        repository.deleteByCreatedAtBefore(Instant.now().minus(RETENTION));
+    }
+
+    /**
+     * Shared expiry / already-verified / attempts / hash-mismatch checks
+     * used by every OTP-purpose verification path, plus a purpose guard so
+     * a code minted for one purpose can never be consumed for another.
+     */
+    private void verifyAndConsumeCode(EmailVerification verification, String code, VerificationPurpose expectedPurpose) {
+        if (verification.getPurpose() != expectedPurpose) {
+            throw ApiException.badRequest("INVALID_CODE", "Incorrect verification code.");
+        }
         if (verification.getVerifiedAt() != null) {
             throw ApiException.badRequest("ALREADY_VERIFIED", "This account is already verified.");
         }
@@ -110,37 +201,12 @@ public class EmailVerificationService {
 
         verification.setVerifiedAt(Instant.now());
         repository.save(verification);
-
-        User user = verification.getUser();
-        user.setEmailVerifiedAt(Instant.now());
-        userRepository.save(user);
-
-        return user;
     }
 
-    @Transactional
-    public EmailVerificationChallengeResponse resend(UUID verificationId, String ipAddress) {
-        EmailVerification current = repository.findById(verificationId)
-            .orElseThrow(() -> ApiException.notFound("VERIFICATION_NOT_FOUND", "Verification session not found. Please sign up again."));
-
-        User user = current.getUser();
-        if (user.getEmailVerifiedAt() != null) {
-            throw ApiException.badRequest("ALREADY_VERIFIED", "This account is already verified.");
-        }
-
-        return startVerification(user, ipAddress);
-    }
-
-    @Scheduled(cron = "0 0 * * * *")
-    @Transactional
-    public void cleanupExpired() {
-        repository.deleteByCreatedAtBefore(Instant.now().minus(RETENTION));
-    }
-
-    private void enforceHourlyLimits(User user, String ipAddress, Instant now) {
+    private void enforceHourlyLimits(User user, VerificationPurpose purpose, String ipAddress, Instant now) {
         Instant since = now.minus(Duration.ofHours(1));
 
-        if (repository.countByUserIdAndCreatedAtAfter(user.getId(), since) >= MAX_SENDS_PER_USER_PER_HOUR) {
+        if (repository.countByUserIdAndPurposeAndCreatedAtAfter(user.getId(), purpose, since) >= MAX_SENDS_PER_USER_PER_HOUR) {
             throw ApiException.tooManyRequests(
                 "TOO_MANY_VERIFICATION_EMAILS",
                 "Too many verification emails requested. Please try again later."

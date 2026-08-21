@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/controllers/auth_controller.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/new_password_page.dart';
+import '../../features/auth/presentation/pages/password_reset_otp_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/verify_email_args.dart';
 import '../../features/auth/presentation/pages/verify_email_page.dart';
@@ -50,7 +53,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final isAuthRoute =
           location == '/login' ||
           location == '/register' ||
-          location == '/verify-email';
+          location == '/verify-email' ||
+          location == '/forgot-password' ||
+          location == '/password-reset/verify' ||
+          location == '/password-reset/new-password';
 
       if (!isLoggedIn && !isAuthRoute) {
         return '/login';
@@ -81,6 +87,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'verify-email',
         builder: (context, state) =>
             VerifyEmailPage(args: state.extra as VerifyEmailArgs),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        name: 'forgot-password',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+      GoRoute(
+        path: '/password-reset/verify',
+        name: 'password-reset-verify',
+        builder: (context, state) =>
+            PasswordResetOtpPage(email: state.extra as String),
+      ),
+      GoRoute(
+        path: '/password-reset/new-password',
+        name: 'password-reset-new-password',
+        builder: (context, state) =>
+            NewPasswordPage(resetToken: state.extra as String),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

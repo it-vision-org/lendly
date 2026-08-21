@@ -57,6 +57,10 @@ class _AuthInterceptor extends Interceptor {
     '/auth/refresh',
     '/auth/email-verification/verify',
     '/auth/email-verification/resend',
+    '/auth/password-reset/request',
+    '/auth/password-reset/resend',
+    '/auth/password-reset/verify',
+    '/auth/password-reset/complete',
   };
 
   bool _isPublicAuthPath(String path) =>

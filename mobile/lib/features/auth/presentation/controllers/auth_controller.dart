@@ -61,6 +61,21 @@ class AuthController extends AsyncNotifier<UserSummary?> {
     state = AsyncData(user);
   }
 
+  Future<void> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final user = await ref
+        .read(authRepositoryProvider)
+        .completePasswordReset(
+          resetToken: resetToken,
+          newPassword: newPassword,
+          confirmPassword: confirmPassword,
+        );
+    state = AsyncData(user);
+  }
+
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
     state = const AsyncData(null);

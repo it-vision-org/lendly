@@ -1,12 +1,6 @@
 package com.lendly.identity.service;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.HexFormat;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -15,12 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.lendly.common.api.ApiException;
 import com.lendly.common.security.AppSecurityProperties;
 import com.lendly.common.security.JwtTokenService;
+import com.lendly.common.security.SecureTokens;
 import com.lendly.identity.api.dto.AuthResponse;
 import com.lendly.identity.api.dto.EmailVerificationChallengeResponse;
 import com.lendly.identity.api.dto.LoginResponse;
 import com.lendly.identity.api.dto.UserSummary;
 import com.lendly.identity.domain.RefreshToken;
 import com.lendly.identity.domain.User;
+import com.lendly.identity.domain.VerificationPurpose;
 import com.lendly.identity.repository.RefreshTokenRepository;
 import com.lendly.identity.repository.UserRepository;
 
@@ -33,7 +29,6 @@ public class AuthService {
     private final JwtTokenService jwtTokenService;
     private final AppSecurityProperties securityProperties;
     private final EmailVerificationService emailVerificationService;
-    private final SecureRandom secureRandom = new SecureRandom();
 
     public AuthService(
         UserRepository userRepository,
@@ -70,7 +65,7 @@ public class AuthService {
         }
         userRepository.save(user);
 
-        return emailVerificationService.startVerification(user, ipAddress);
+        return emailVerificationService.startVerification(user, VerificationPurpose.EMAIL_VERIFICATION, ipAddress);
     }
 
     @Transactional
@@ -99,7 +94,8 @@ public class AuthService {
         }
 
         if (user.getEmailVerifiedAt() == null) {
-            EmailVerificationChallengeResponse challenge = emailVerificationService.startVerification(user, ipAddress);
+            EmailVerificationChallengeResponse challenge =
+                emailVerificationService.startVerification(user, VerificationPurpose.EMAIL_VERIFICATION, ipAddress);
             return LoginResponse.verificationRequired(challenge);
         }
 
@@ -111,9 +107,39 @@ public class AuthService {
         return issueTokenPair(user, deviceInfo);
     }
 
+    /**
+     * Starts (or restarts) a password-reset code for {@code email}. Silently
+     * does nothing if no account matches, so callers must always return the
+     * same generic response regardless of whether an account exists.
+     */
+    @Transactional
+    public void requestPasswordReset(String email, String ipAddress) {
+        userRepository.findByEmail(email.trim().toLowerCase())
+            .ifPresent(user -> emailVerificationService.startVerification(user, VerificationPurpose.PASSWORD_RESET, ipAddress));
+    }
+
+    @Transactional
+    public AuthResponse completePasswordReset(String resetTokenPlain, String newPassword, String confirmPassword) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw ApiException.badRequest("PASSWORD_MISMATCH", "The passwords don't match.");
+        }
+
+        User user = emailVerificationService.consumeResetToken(resetTokenPlain);
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        if (user.getEmailVerifiedAt() == null) {
+            user.setEmailVerifiedAt(Instant.now());
+        }
+        userRepository.save(user);
+
+        refreshTokenRepository.revokeAllForUser(user.getId(), Instant.now());
+
+        return issueTokenPair(user, "password-reset");
+    }
+
     @Transactional
     public AuthResponse refresh(String refreshTokenPlain, String deviceInfo) {
-        String hash = hash(refreshTokenPlain);
+        String hash = SecureTokens.hash(refreshTokenPlain);
         RefreshToken token = refreshTokenRepository.findByTokenHash(hash)
             .filter(t -> t.isActive(Instant.now()))
             .orElseThrow(() -> ApiException.unauthorized("INVALID_REFRESH_TOKEN", "Refresh token invalid or expired"));
@@ -124,19 +150,19 @@ public class AuthService {
 
     @Transactional
     public void logout(String refreshTokenPlain) {
-        refreshTokenRepository.findByTokenHash(hash(refreshTokenPlain))
+        refreshTokenRepository.findByTokenHash(SecureTokens.hash(refreshTokenPlain))
             .ifPresent(token -> token.setRevokedAt(Instant.now()));
     }
 
     private AuthResponse issueTokenPair(User user, String deviceInfo) {
         String accessToken = jwtTokenService.issueAccessToken(user.getId(), user.getEmail(), user.getFullName());
 
-        String refreshPlain = generateOpaqueToken();
+        String refreshPlain = SecureTokens.generate();
         Instant now = Instant.now();
 
         RefreshToken refreshToken = new RefreshToken(
             user,
-            hash(refreshPlain),
+            SecureTokens.hash(refreshPlain),
             deviceInfo,
             now,
             now.plus(securityProperties.refreshTokenExpiration())
@@ -149,20 +175,5 @@ public class AuthService {
             securityProperties.accessTokenExpiration().toSeconds(),
             UserSummary.from(user)
         );
-    }
-
-    private String generateOpaqueToken() {
-        byte[] bytes = new byte[32];
-        secureRandom.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private String hash(String value) {
-        try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 not available", e);
-        }
     }
 }

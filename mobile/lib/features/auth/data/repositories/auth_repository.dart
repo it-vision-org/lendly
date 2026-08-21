@@ -65,6 +65,66 @@ class AuthRepository {
     }
   }
 
+  /// Always succeeds from the caller's point of view whether or not the
+  /// email belongs to an account — that's the backend's account-enumeration
+  /// protection, so there is nothing to branch on here.
+  Future<void> requestPasswordReset({required String email}) async {
+    try {
+      await _dio.post<void>(
+        '/auth/password-reset/request',
+        data: {'email': email},
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<void> resendPasswordResetCode({required String email}) async {
+    try {
+      await _dio.post<void>(
+        '/auth/password-reset/resend',
+        data: {'email': email},
+      );
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<String> verifyPasswordResetCode({
+    required String email,
+    required String code,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/password-reset/verify',
+        data: {'email': email, 'code': code},
+      );
+      return response.data!['resetToken'] as String;
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<UserSummary> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/password-reset/complete',
+        data: {
+          'resetToken': resetToken,
+          'newPassword': newPassword,
+          'confirmPassword': confirmPassword,
+        },
+      );
+      return _saveTokensAndReturnUser(response.data!);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// Returns [LoginResult.authenticated] with tokens saved on success, or
   /// [LoginResult.verificationRequired] (no tokens saved) if the password was
   /// correct but the account still needs email verification.

@@ -14,15 +14,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.lendly.common.api.ApiException;
 import com.lendly.common.security.AppSecurityProperties;
 import com.lendly.common.security.JwtTokenService;
+import com.lendly.identity.api.dto.AuthResponse;
 import com.lendly.identity.api.dto.EmailVerificationChallengeResponse;
 import com.lendly.identity.api.dto.LoginResponse;
 import com.lendly.identity.domain.User;
+import com.lendly.identity.domain.VerificationPurpose;
 import com.lendly.identity.repository.RefreshTokenRepository;
 import com.lendly.identity.repository.UserRepository;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -71,7 +74,8 @@ class AuthServiceTest {
         when(userRepository.findByEmail("ahmed@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("correct-password", "hashed-password")).thenReturn(true);
         EmailVerificationChallengeResponse challenge = new EmailVerificationChallengeResponse(UUID.randomUUID(), 600, 60);
-        when(emailVerificationService.startVerification(user, "127.0.0.1")).thenReturn(challenge);
+        when(emailVerificationService.startVerification(user, VerificationPurpose.EMAIL_VERIFICATION, "127.0.0.1"))
+            .thenReturn(challenge);
 
         LoginResponse response = authService.login("ahmed@example.com", "correct-password", "flutter-app", "127.0.0.1");
 
@@ -113,5 +117,55 @@ class AuthServiceTest {
 
         assertEquals("INVALID_CREDENTIALS", exception.getCode());
         verify(refreshTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void requestPasswordResetForAnExistingEmailStartsVerification() {
+        User user = new User("Ahmed Zouaghi", "ahmed@example.com", "hashed-password");
+        when(userRepository.findByEmail("ahmed@example.com")).thenReturn(Optional.of(user));
+
+        authService.requestPasswordReset("ahmed@example.com", "127.0.0.1");
+
+        verify(emailVerificationService).startVerification(user, VerificationPurpose.PASSWORD_RESET, "127.0.0.1");
+    }
+
+    @Test
+    void requestPasswordResetForANonexistentEmailDoesNothingAndNeverThrows() {
+        when(userRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
+
+        authService.requestPasswordReset("nobody@example.com", "127.0.0.1");
+
+        verify(emailVerificationService, never()).startVerification(any(), any(), any());
+    }
+
+    @Test
+    void completePasswordResetEncodesThePasswordRevokesSessionsAndIssuesFreshTokens() {
+        User user = new User("Ahmed Zouaghi", "ahmed@example.com", "old-hash");
+        user.setId(UUID.randomUUID());
+        user.setEmailVerifiedAt(Instant.now());
+
+        when(emailVerificationService.consumeResetToken("plain-reset-token")).thenReturn(user);
+        when(passwordEncoder.encode("NewPassword123")).thenReturn("new-hash");
+        when(jwtTokenService.issueAccessToken(eq(user.getId()), eq(user.getEmail()), anyString())).thenReturn("access-token");
+
+        AuthResponse response = authService.completePasswordReset("plain-reset-token", "NewPassword123", "NewPassword123");
+
+        assertEquals("new-hash", user.getPasswordHash());
+        assertNotEquals("old-hash", user.getPasswordHash());
+        assertNotNull(response);
+        assertEquals("access-token", response.accessToken());
+        verify(refreshTokenRepository).revokeAllForUser(eq(user.getId()), any());
+        verify(refreshTokenRepository).save(any());
+    }
+
+    @Test
+    void completePasswordResetRejectsMismatchedConfirmationWithoutConsumingTheToken() {
+        ApiException exception = assertThrows(
+            ApiException.class,
+            () -> authService.completePasswordReset("plain-reset-token", "NewPassword123", "DifferentPassword123")
+        );
+
+        assertEquals("PASSWORD_MISMATCH", exception.getCode());
+        verify(emailVerificationService, never()).consumeResetToken(any());
     }
 }

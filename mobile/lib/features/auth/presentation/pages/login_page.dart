@@ -74,7 +74,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
-                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () => context.push('/forgot-password'),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
                   if (_error != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8, bottom: 8),
