@@ -32,15 +32,13 @@ flutter_launcher_icons:
   image_path: "assets/icons/app_icon.png"
 
 flutter_native_splash:
-  color: "#0B1F3A"
-  image: assets/images/splash-screen.png
+  # No image here on purpose: the OS-level native splash (unavoidable on
+  # Android/iOS — something renders before Flutter/Dart even starts) is left
+  # as a plain color matching SplashPage's background, so the logo only ever
+  # appears once, drawn by Flutter itself, instead of flashing twice.
+  color: "#F6F8FC"
   android_12:
-    color: "#0B1F3A"
-    # Android 12+'s native splash API renders this inside a small fixed-size
-    # icon window (not full-screen), so it needs a square icon-shaped asset —
-    # the wide icon+wordmark lockup used for `image` above gets badly cropped
-    # here. app_icon.png is already shaped correctly for this.
-    image: assets/icons/app_icon.png
+    color: "#F6F8FC"
 
 flutter:
   uses-material-design: true
