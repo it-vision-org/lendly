@@ -1,0 +1,32 @@
+name: Deploy backend to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "compose.prod.yaml"
+      - ".github/workflows/deploy.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-vps-lendly
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /opt/lendly
+            git fetch --all
+            git reset --hard origin/main
+            docker compose -f compose.prod.yaml up -d --build --remove-orphans
+            docker image prune -f
