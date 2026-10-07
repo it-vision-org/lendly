@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/empty_state.dart';
 import '../../../../core/widgets/error_view.dart';
 import '../controllers/transactions_controller.dart';
+import '../widgets/contact_filter_button.dart';
 import '../widgets/transaction_tile.dart';
 
 class TransactionsPage extends ConsumerWidget {
@@ -20,6 +21,7 @@ class TransactionsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedFilter = ref.watch(transactionsFilterProvider);
+    final selectedContact = ref.watch(transactionsContactFilterProvider);
     final transactionsAsync = ref.watch(transactionsControllerProvider);
 
     return Scaffold(
@@ -54,6 +56,18 @@ class TransactionsPage extends ConsumerWidget {
               ),
             ),
           ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: ContactFilterButton(
+                selected: selectedContact,
+                onChanged: (contact) =>
+                    ref.read(transactionsContactFilterProvider.notifier).state =
+                        contact,
+              ),
+            ),
+          ),
           Expanded(
             child: RefreshIndicator(
               onRefresh: () =>
@@ -69,13 +83,32 @@ class TransactionsPage extends ConsumerWidget {
                 data: (transactions) {
                   if (transactions.isEmpty) {
                     return ListView(
-                      children: const [
+                      children: [
                         Padding(
-                          padding: EdgeInsets.symmetric(vertical: 64),
-                          child: EmptyState(
-                            icon: Icons.receipt_long_outlined,
-                            title: 'No transactions here yet',
-                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 64),
+                          child: selectedContact == null
+                              ? const EmptyState(
+                                  icon: Icons.receipt_long_outlined,
+                                  title: 'No transactions here yet',
+                                )
+                              : EmptyState(
+                                  icon: Icons.person_search_outlined,
+                                  title:
+                                      'No transactions with '
+                                      '${selectedContact.name} here yet',
+                                  message:
+                                      'Try another filter, or show '
+                                      'transactions from everyone.',
+                                  actionLabel: 'Show all contacts',
+                                  onAction: () =>
+                                      ref
+                                              .read(
+                                                transactionsContactFilterProvider
+                                                    .notifier,
+                                              )
+                                              .state =
+                                          null,
+                                ),
                         ),
                       ],
                     );
