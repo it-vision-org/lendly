@@ -6,6 +6,6 @@ abstract final class Environment {
   /// or `http://localhost:8080/api` (iOS simulator).
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://lendly-1w5a.onrender.com/api',
+    defaultValue: 'https://lendly.72-62-156-28.sslip.io/api',
   );
 }
